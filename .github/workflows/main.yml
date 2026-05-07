@@ -1,0 +1,30 @@
+name: Coupang Daily Report
+
+on:
+  schedule:
+    - cron: '0 23 * * *' # 한국시간 오전 8시 (UTC 23:00)
+  workflow_dispatch: # 직접 실행 버튼 활성화
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install dependencies
+        run: pip install requests pandas openpyxl
+      - name: Run bot
+        env:
+          ACCESS_KEY: ${{ secrets.ACCESS_KEY }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        run: python coupang_bot.py
+      - name: Save files
+        run: |
+          git config --global user.name "CoupangBot"
+          git config --global user.email "bot@github.com"
+          git add .
+          git commit -m "매일 아침 자동 업데이트" || exit 0
+          git push
