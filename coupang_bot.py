@@ -1,4 +1,5 @@
-import hmac, hashlib, datetime, requests, os, pandas as pd
+
+   import hmac, hashlib, datetime, requests, os, pandas as pd
 
 def generate_hmac(method, url, secret_key, access_key):
     path, _, query = url.partition('?')
@@ -8,10 +9,11 @@ def generate_hmac(method, url, secret_key, access_key):
     return f"CEA algorithm=HmacSHA256, access-key={access_key}, signed-date={datetime_str}, signature={signature}"
 
 def main():
+    # Load keys from Secrets
     ACCESS_KEY = os.environ['ACCESS_KEY']
     SECRET_KEY = os.environ['SECRET_KEY']
     
-    # 가전디지털 카테고리(1016) 기준
+    # Category: Consumer Electronics (가전디지털: 1016)
     URL = "/v2/providers/affiliate_open_api/apis/openapi/v1/products/bestcategories/1016"
     auth = generate_hmac("GET", URL, SECRET_KEY, ACCESS_KEY)
     
@@ -19,10 +21,23 @@ def main():
     
     if res.status_code == 200:
         products = res.json().get('data', [])[:20]
-        df = pd.DataFrame(products)[['productName', 'productPrice', 'productUrl']]
+        
+        # Clean Data & Shorten Links
+        rows = []
+        for p in products:
+            rows.append({
+                '상품명': p['productName'],
+                '가격': p['productPrice'],
+                # This part shortens the long URL into "클릭해서 이동"
+                '링크': f'=HYPERLINK("{p["productUrl"]}", "클릭해서 이동")'
+            })
+            
+        df = pd.DataFrame(rows)
         filename = f"Coupang_Top20_{datetime.datetime.now().strftime('%Y%m%d')}.xlsx"
+        
+        # Save to Excel
         df.to_excel(filename, index=False)
-        print(f"{filename} 파일 생성 완료!")
+        print(f"Successfully created: {filename}")
 
 if __name__ == "__main__":
     main()
